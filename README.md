@@ -92,8 +92,18 @@ go mod edit -droprequire=github.com/go-asmgen/asmgen && go mod tidy
 | arm64 | native, table + 60k random + `-fuzz` | ✅ native |
 | riscv64 | qemu `rv64,v=true,vlen=128`, table + 60k random | ✅ qemu-validated |
 | loong64 | qemu `la464`, table + 60k random | ✅ qemu-validated |
-| ppc64le | qemu `power9`, table + 60k random | ✅ qemu-validated; native perf pending |
-| s390x | qemu (big-endian), table + 60k random | ✅ qemu-validated; native perf pending |
+| ppc64le | **real POWER10** (GCC Compile Farm, VSX, Go 1.26.4), table + 60k random + native bench | ✅ native (measured) |
+| ppc64 (BE) | **real POWER9** (GCC Compile Farm, big-endian), table + 60k random | ✅ native build+test (scalar fallback path) |
+| s390x | qemu (big-endian), table + 60k random | ✅ qemu-validated for correctness; native throughput pending |
+
+Six SIMD targets, validated on seven architectures: ppc64le is now measured on
+real POWER10 silicon (GCC Compile Farm, <https://portal.cfarm.net/>, VSX, Go
+1.26.4, June 2026). A seventh architecture, **ppc64 (big-endian) on real
+POWER9**, is build+test validated — the portable scalar fallback proven
+bit-exact on a big-endian target distinct from s390x's vector kernel. SIMD
+acceleration remains the six targets above; s390x stays qemu-validated for
+correctness only, with native throughput still pending (no GitHub-hosted IBM Z
+runner).
 
 ## Performance
 
@@ -116,10 +126,19 @@ universal speedup. If your payloads are number-dense, `encoding/json.Valid` is
 the better choice today; the scalar number scan is the obvious next thing to
 optimise. `Valid` allocates nothing on any path.
 
+Measured on real POWER10 (ppc64le VSX, GCC Compile Farm, June 2026):
+string-heavy JSON runs at ~406 MB/s vs the stdlib's ~48 MB/s — **~8.5× the
+stdlib** on that input. As above, this is the string fast path: number- and
+structure-heavy input stays on the scalar path and does not see the VSX speedup.
+s390x throughput is still pending native hardware (estimate/qemu-validated for
+correctness only).
+
 ## Test coverage
 
-100% of statements, enforced in CI on every arch (native amd64/arm64; the other
-four under qemu). The suite is a big table covering every accept/reject class
+100% of statements, enforced in CI across six SIMD targets, validated on seven
+architectures (native amd64/arm64; ppc64le natively measured on real POWER10;
+ppc64 big-endian build+test on real POWER9; the remaining targets under qemu).
+The suite is a big table covering every accept/reject class
 (literals, all number forms and malformations, strings with every escape and raw
 invalid UTF-8, control chars, the exact 10 000-deep nesting boundary, structural
 errors, trailing junk), a direct per-alignment test of the SIMD scan kernels
