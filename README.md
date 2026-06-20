@@ -90,15 +90,16 @@ go mod edit -droprequire=github.com/go-asmgen/asmgen && go mod tidy
 |---|---|---|
 | amd64 (AVX2 + SSE) | native x86_64 VM, table + 60k random + `-fuzz` (both paths) | ✅ native |
 | arm64 | native, table + 60k random + `-fuzz` | ✅ native |
-| riscv64 | qemu `rv64,v=true,vlen=128`, table + 60k random | ✅ qemu-validated |
+| riscv64 | **real SpacemiT X60** (RVV 1.0, GCC Compile Farm, Go 1.26.4), table + 60k random + native bench | ✅ native (measured) |
 | loong64 | qemu `la464`, table + 60k random | ✅ qemu-validated |
 | ppc64le | **real POWER10** (GCC Compile Farm, VSX, Go 1.26.4), table + 60k random + native bench | ✅ native (measured) |
 | ppc64 (BE) | **real POWER9** (GCC Compile Farm, big-endian), table + 60k random | ✅ native build+test (scalar fallback path) |
 | s390x | qemu (big-endian), table + 60k random | ✅ qemu-validated for correctness; native throughput pending |
 
 Six SIMD targets, validated on seven architectures: ppc64le is now measured on
-real POWER10 silicon (GCC Compile Farm, <https://portal.cfarm.net/>, VSX, Go
-1.26.4, June 2026). A seventh architecture, **ppc64 (big-endian) on real
+real POWER10 silicon and riscv64 on a real SpacemiT X60 (RVV 1.0) (GCC Compile
+Farm, <https://portal.cfarm.net/>, Go 1.26.4, June 2026). A seventh architecture,
+**ppc64 (big-endian) on real
 POWER9**, is build+test validated — the portable scalar fallback proven
 bit-exact on a big-endian target distinct from s390x's vector kernel. SIMD
 acceleration remains the six targets above; s390x stays qemu-validated for
@@ -130,14 +131,22 @@ Measured on real POWER10 (ppc64le VSX, GCC Compile Farm, June 2026):
 string-heavy JSON runs at ~406 MB/s vs the stdlib's ~48 MB/s — **~8.5× the
 stdlib** on that input. As above, this is the string fast path: number- and
 structure-heavy input stays on the scalar path and does not see the VSX speedup.
-s390x throughput is still pending native hardware (estimate/qemu-validated for
-correctness only).
+
+Measured on real riscv64 (SpacemiT X60, RVV 1.0, GCC Compile Farm, Go 1.26.4,
+June 2026): string-heavy JSON runs at ~191 MB/s vs the stdlib's ~36.5 MB/s —
+**~5.2× the stdlib** on that input. Same honest split: number- and
+structure-heavy input stays on the scalar path and sees no RVV speedup. The X60
+is a low-power *in-order* RVV core — currently the only widely-available RVV
+silicon — so this string fast path wins big and an out-of-order RVV part would
+likely do better. s390x throughput is still pending native hardware
+(estimate/qemu-validated for correctness only).
 
 ## Test coverage
 
 100% of statements, enforced in CI across six SIMD targets, validated on seven
 architectures (native amd64/arm64; ppc64le natively measured on real POWER10;
-ppc64 big-endian build+test on real POWER9; the remaining targets under qemu).
+riscv64 natively measured on a real SpacemiT X60; ppc64 big-endian build+test on
+real POWER9; the remaining targets under qemu).
 The suite is a big table covering every accept/reject class
 (literals, all number forms and malformations, strings with every escape and raw
 invalid UTF-8, control chars, the exact 10 000-deep nesting boundary, structural
