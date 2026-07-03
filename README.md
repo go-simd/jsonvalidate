@@ -94,17 +94,14 @@ go mod edit -droprequire=github.com/go-asmgen/asmgen && go mod tidy
 | loong64 | qemu `la464`, table + 60k random | ✅ qemu-validated |
 | ppc64le | **real POWER9** (GCC Compile Farm, VSX, Go 1.26.4), table + 60k random + native bench | ✅ native (measured) |
 | ppc64 (BE) | **real POWER9** (GCC Compile Farm, big-endian), table + 60k random | ✅ native build+test (scalar fallback path) |
-| s390x | qemu (big-endian), table + 60k random | ✅ qemu-validated for correctness; native throughput pending |
+| s390x | **real z15** (LPAR guest, VXE2, Ubuntu 6.8, go1.26.4, 2026-07-03) | ✅ native (measured): `Valid/strings` 1427 MB/s = **4.66× stdlib** |
 
-Six SIMD targets, validated on seven architectures: ppc64le is now measured on
-real POWER9 silicon and riscv64 on a real SpacemiT X60 (RVV 1.0) (GCC Compile
-Farm, <https://portal.cfarm.net/>, Go 1.26.4, 2026-06-26). A seventh architecture,
-**ppc64 (big-endian) on real
-POWER9**, is build+test validated — the portable scalar fallback proven
-bit-exact on a big-endian target distinct from s390x's vector kernel. SIMD
-acceleration remains the six targets above; s390x stays qemu-validated for
-correctness only, with native throughput still pending (no GitHub-hosted IBM Z
-runner).
+Six SIMD targets, validated on **eight** architectures: ppc64le measured on real
+POWER9 (cfarm433), riscv64 on real SpacemiT X60 RVV 1.0 (cfarm95), loong64 on
+real Loongson 3A5000 LSX (cfarm401), and **s390x on real z15 VXE2** (linux1
+LPAR, 2026-07-03). ppc64 (big-endian) on real POWER9 (cfarm121) is build+test
+validated — the portable scalar fallback proven bit-exact on a big-endian
+target distinct from s390x's vector kernel.
 
 ## Performance
 
@@ -138,8 +135,15 @@ Measured on real riscv64 (SpacemiT X60, RVV 1.0, GCC Compile Farm, Go 1.26.4,
 structure-heavy input stays on the scalar path and sees no RVV speedup. The X60
 is a low-power *in-order* RVV core — currently the only widely-available RVV
 silicon — so this string fast path wins big and an out-of-order RVV part would
-likely do better. s390x throughput is still pending native hardware
-(estimate/qemu-validated for correctness only).
+likely do better.
+
+Measured on real s390x (IBM z15 LPAR guest, VXE2, Ubuntu 6.8, go1.26.4,
+2026-07-03): string-heavy JSON runs at **1427 MB/s vs stdlib 306 MB/s — 4.66×**.
+Same honest split for the other benches: `numbers` 263 vs stdlib 340 MB/s
+(0.77×) and `whitespace` 229 vs stdlib 304 (0.75×) — those inputs stay on the
+scalar path, where stdlib's integrated state machine (interleaved WS-skip +
+token parse) beats a chunked `scanString`/`skipSpace` pass. This is
+structural, not a kernel gap.
 
 ## Test coverage
 
