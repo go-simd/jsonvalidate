@@ -1,8 +1,13 @@
 //go:build ignore
 
-// Command gen produces scan_s390x.s with go-asmgen: the two SIMD byte-class
-// scans (16-byte vector-facility blocks, z13+ baseline) that accelerate JSON
+// Command gen produces scan_s390x.s with go-asmgen: the SIMD byte-class string
+// scan (16-byte vector-facility blocks, z13+ baseline) that accelerates JSON
 // validation.
+//
+// s390x ships only the scanStr kernel. On real IBM z15 the vector whitespace
+// scan (skipWs) is a net loss versus the scalar reference on the inputs that
+// exercise it (0.74x whitespace-heavy, 0.77x number-heavy), so skipSpace routes
+// to scalar on s390x (see scan_s390x.go) and no skipWs kernel is emitted here.
 //
 // Each byte c is classified by a pair of 16-entry nibble LUTs: c is "in the set"
 // iff (loLUT[c&0x0F] & hiLUT[c>>4]) != 0. The two lookups use VPERM (a 16-entry
@@ -19,9 +24,10 @@
 //
 //   - scanStr: stop set = {'"','\\', c < 0x20}; the marker (lo&hi) is nonzero at
 //     in-set bytes, so VFENEBS against zero finds the first stop directly.
-//   - skipWs: stop at the first non-whitespace byte; the whitespace LUTs make
-//     (lo&hi) nonzero at whitespace, so VCEQB against zero first turns
-//     non-whitespace bytes into 0xFF, then VFENEBS finds the first such byte.
+//
+// (The invert=true path, used by the retired skipWs kernel, turns the marker
+// into "non-member" via VCEQB against zero before VFENEBS; it is kept in emit so
+// the generator stays a drop-in for the other five arches' whitespace kernels.)
 //
 // If no byte matches (CC=3), the kernel returns the block-aligned end and the
 // scalar reference finishes the tail. The position-dependent qemu FuzzValid /
@@ -42,8 +48,6 @@ import (
 
 var strLoLUT = []byte{3, 3, 7, 3, 3, 3, 3, 3, 3, 3, 3, 3, 11, 3, 3, 3}
 var strHiLUT = []byte{1, 2, 4, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-var wsLoLUT = []byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0}
-var wsHiLUT = []byte{1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func sig() abi.Signature {
 	return abi.LayoutArgs(
@@ -57,8 +61,6 @@ func main() {
 
 	strLo := f.Data("strLo_z", strLoLUT)
 	strHi := f.Data("strHi_z", strHiLUT)
-	wsLo := f.Data("wsLo_z", wsLoLUT)
-	wsHi := f.Data("wsHi_z", wsHiLUT)
 
 	// emit builds a 16-byte/block kernel. invert=true (skipWs) turns the marker
 	// into "non-member" via VCEQB against zero; invert=false (scanStr) uses
@@ -106,7 +108,6 @@ func main() {
 	}
 
 	emit("scanStrVX", strLo, strHi, false)
-	emit("skipWsVX", wsLo, wsHi, true)
 
 	if err := os.WriteFile("scan_s390x.s", []byte(f.String()), 0o644); err != nil {
 		fmt.Fprintln(os.Stderr, err)
