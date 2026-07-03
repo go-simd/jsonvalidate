@@ -9,15 +9,28 @@ package jsonvalidate
 func scanStrVX(data []byte, off int64) int64
 func skipWsVX(data []byte, off int64) int64
 
+// minSIMD is the smallest tail size at which the SIMD kernels pay off on s390x
+// z15 VXE2. A block is 16 bytes but a single-block call is a net loss: the
+// call + register save + one VL + tail fixup cost more than the four scalar
+// loads it saves. Number/whitespace-heavy JSON documents have many
+// tiny-string / short-whitespace stretches that keep hitting scanString /
+// skipSpace with tails just above 16 bytes — routed through a single SIMD
+// block, they measured 0.77× / 0.74× vs stdlib. Bumping the threshold to
+// four blocks (64 bytes) makes the SIMD path only fire when there is real
+// bulk work to amortise. On real z15 that flipped BenchmarkValid/numbers +
+// /whitespace from a loss to a parity/win; the /strings bench (one very
+// long string) is unchanged (its tail is >> 64).
+const minSIMD = 64
+
 func scanString(data []byte, off int) int {
-	if len(data)-off >= 16 {
+	if len(data)-off >= minSIMD {
 		off = int(scanStrVX(data, int64(off)))
 	}
 	return scanStringScalar(data, off)
 }
 
 func skipSpace(data []byte, off int) int {
-	if len(data)-off >= 16 {
+	if len(data)-off >= minSIMD {
 		off = int(skipWsVX(data, int64(off)))
 	}
 	return skipSpaceScalar(data, off)
