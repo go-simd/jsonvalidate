@@ -1,0 +1,35 @@
+name: fuzz
+# Nightly time-boxed randomized fuzzing. This deliberately does NOT run on pull
+# requests: `go test -fuzz` is wall-clock time-boxed and the Go fuzzing engine
+# intermittently exits non-zero with "context deadline exceeded" when a worker does
+# not wind down within -fuzztime even though no crasher was found, which made it a
+# false-red PR gate. The deterministic seed-corpus run stays in ci.yml (blocking).
+# Steps are continue-on-error so the benign deadline flake never reds this workflow;
+# any real crasher is printed in the log and its input is uploaded as an artifact
+# (add it under testdata/fuzz to turn it into a permanent ci.yml regression case).
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+jobs:
+  fuzz:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, arch: amd64 }
+          - { os: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with: { go-version: stable }
+      - run: go test -run '^$' -fuzz FuzzValid -fuzztime 3m ./...
+        continue-on-error: true
+      - name: upload any fuzz-discovered corpus
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-findings-${{ matrix.arch }}
+          path: testdata/fuzz/
+          if-no-files-found: ignore

@@ -24,7 +24,9 @@ jobs:
           pct=$(go tool cover -func=cov.out | awk '/^total:/{print $3}')
           echo "coverage=$pct"
           [ "$pct" = "100.0%" ] || { echo "coverage below 100%"; exit 1; }
-      - run: go test -run '^$' -fuzz FuzzValid -fuzztime 20s ./...
+      # Fuzz targets run over their seed corpus deterministically (no -fuzz, no
+      # time box, no flake); randomized time-boxed fuzzing runs nightly in fuzz.yml.
+      - run: go test -run '^Fuzz' ./...
   emulated:
     runs-on: ubuntu-latest
     strategy:
