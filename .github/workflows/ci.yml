@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with: { go-version: stable }
       - run: go vet ./...
       - run: go test -v ./...
@@ -47,7 +47,7 @@ jobs:
           - { arch: s390x,   image: "debian:trixie", qemu: "qemu" }
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with: { go-version: stable }
       - run: docker run --privileged --rm tonistiigi/binfmt --install all
       - run: CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go test -c -cover -o /tmp/t.test .
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with: { go-version: stable }
       - run: docker run --privileged --rm tonistiigi/binfmt --install all
       - run: CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go test -c -cover -o /tmp/t.test .

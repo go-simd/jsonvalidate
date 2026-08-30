@@ -22,13 +22,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with: { go-version: stable }
       - run: go test -run '^$' -fuzz FuzzValid -fuzztime 3m ./...
         continue-on-error: true
       - name: upload any fuzz-discovered corpus
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-findings-${{ matrix.arch }}
           path: testdata/fuzz/
