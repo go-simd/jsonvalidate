@@ -157,13 +157,13 @@ func main() {
 		b.Raw("VMOVDQU (SI)(AX*1), Y0")
 		// VPSHUFB is per-128-bit-lane; both LUT halves are duplicated across the
 		// two lanes (rep(...,2)) so the lookup is correct in each lane.
-		b.Raw("VPAND Y5, Y0, Y1")     // c & 0x0F
-		b.Raw("VPSHUFB Y1, Y3, Y2")   // loLUT[c&0x0F]
-		b.Raw("VPSRLW $4, Y0, Y1")    // c >> 4
-		b.Raw("VPAND Y5, Y1, Y1")     // (c>>4)&0x0F
-		b.Raw("VPSHUFB Y1, Y4, Y0")   // hiLUT[c>>4]
-		b.Raw("VPAND Y2, Y0, Y0")     // lo & hi
-		b.Raw("VPCMPEQB Y6, Y0, Y0")  // 0xFF where ==0 (not in set)
+		b.Raw("VPAND Y5, Y0, Y1")    // c & 0x0F
+		b.Raw("VPSHUFB Y1, Y3, Y2")  // loLUT[c&0x0F]
+		b.Raw("VPSRLW $4, Y0, Y1")   // c >> 4
+		b.Raw("VPAND Y5, Y1, Y1")    // (c>>4)&0x0F
+		b.Raw("VPSHUFB Y1, Y4, Y0")  // hiLUT[c>>4]
+		b.Raw("VPAND Y2, Y0, Y0")    // lo & hi
+		b.Raw("VPCMPEQB Y6, Y0, Y0") // 0xFF where ==0 (not in set)
 		b.Raw("VPMOVMSKB Y0, R9")
 		if stopOnMatch {
 			b.Raw("NOTL R9")

@@ -100,7 +100,7 @@ func main() {
 		b.Raw("JMP loop")
 		b.Label("lo_half")
 		b.Raw("RBIT R6, R7")
-		b.Raw("CLZ R7, R7")    // trailing-zero bit count
+		b.Raw("CLZ R7, R7")     // trailing-zero bit count
 		b.Raw("LSR $3, R7, R7") // -> byte index
 		b.Raw("ADD R2, R7, R7")
 		b.StoreRet("R7", "ret")

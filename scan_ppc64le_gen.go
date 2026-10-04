@@ -88,10 +88,10 @@ func main() {
 		b.Raw("ADD R4, R7, R9")
 		b.Raw("LXVD2X (R0)(R9), VS32") // V0 = block (matchlen byte order)
 		// lo = perm(loLUT, c & 0x0F)
-		b.Raw("VAND V0, V27, V1")     // V1 = c & 0x0F
+		b.Raw("VAND V0, V27, V1") // V1 = c & 0x0F
 		b.Raw("VPERM V24, V24, V1, V2")
 		// hi = perm(hiLUT, c >> 4)
-		b.Raw("VSRB V0, V26, V3")     // V3 = c >> 4 (per byte)
+		b.Raw("VSRB V0, V26, V3") // V3 = c >> 4 (per byte)
 		b.Raw("VPERM V25, V25, V3, V4")
 		// marker = lo & hi
 		b.Raw("VAND V2, V4, V5") // V5 = marker
