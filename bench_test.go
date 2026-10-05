@@ -13,7 +13,7 @@ var benchInputs = map[string][]byte{
 	"strings": []byte(`{"name":"jsonvalidate","desc":"` +
 		strings.Repeat("a fairly long string value that spans many SIMD blocks ", 8) +
 		`","tags":["alpha","beta","gamma","delta","epsilon"]}`),
-	"numbers": []byte("[" + strings.Repeat("-123.456e+7,", 200) + "0]"),
+	"numbers":    []byte("[" + strings.Repeat("-123.456e+7,", 200) + "0]"),
 	"whitespace": []byte("[\n" + strings.Repeat("    1,\n", 200) + "    2\n]"),
 }
 
