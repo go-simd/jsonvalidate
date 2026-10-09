@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
-        with: { go-version: 1.27.1 }
+        with: { go-version: 1.27.2 }
       - run: go test -run '^$' -fuzz FuzzValid -fuzztime 3m ./...
         continue-on-error: true
       - name: upload any fuzz-discovered corpus
